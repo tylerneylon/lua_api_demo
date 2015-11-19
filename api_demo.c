@@ -13,7 +13,9 @@
 #include "lua.h"
 #include "lauxlib.h"
 
+#include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 
 #define states_table_key "ApiDemo.States"
@@ -33,41 +35,131 @@ static FakeLuaState *current_state;
 
 // Internal functions.
 
-void print_stack_item(lua_State *L, int i) {
+static void print_item(lua_State *L, int i, int as_key);
+
+static int is_identifier(const char *s) {
+  while (*s) {
+    if (!isalnum(*s) && *s != '_') return 0;
+    ++s;
+  }
+  return 1;
+}
+
+static int is_seq(lua_State *L, int i) {
+      // stack = [..]
+  lua_pushnil(L);
+      // stack = [.., nil]
+  int keynum = 1;
+  while (lua_next(L, i)) {
+      // stack = [.., key, value]
+    lua_rawgeti(L, i, keynum);
+      // stack = [.., key, value, t[keynum]]
+    if (lua_isnil(L, -1)) {
+      lua_pop(L, 3);
+      // stack = [..]
+      return 0;
+    }
+    lua_pop(L, 2);
+      // stack = [.., key]
+    keynum++;
+  }
+      // stack = [..]
+  return 1;
+}
+
+static void print_seq(lua_State *L, int i) {
+  printf("{");
+
+  for (int k = 1;; ++k) {
+        // stack = [..]
+    lua_rawgeti(L, i, k);
+        // stack = [.., t[k]]
+    if (lua_isnil(L, -1)) break;
+    if (k > 1) printf(", ");
+    print_item(L, -1, 0);  // 0 --> as_key
+    lua_pop(L, 1);
+        // stack = [..]
+  }
+        // stack = [.., nil]
+  lua_pop(L, 1);
+        // stack = [..]
+
+  printf("}");
+}
+
+static void print_table(lua_State *L, int i) {
+  // Ensure i is an absolute index as we'll be pushing/popping things after it.
+  if (i < 0) i = lua_gettop(L) + i + 1;
+
+  const char *prefix = "{";
+  if (is_seq(L, i)) {
+    print_seq(L, i);  // This case includes all empty tables.
+  } else {
+        // stack = [..]
+    lua_pushnil(L);
+        // stack = [.., nil]
+    while (lua_next(L, i)) {
+      printf("%s", prefix);
+        // stack = [.., key, value]
+      print_item(L, -2, 1);  // 1 --> as_key
+      printf(" = ");
+      print_item(L, -1, 0);  // 0 --> as_key
+      lua_pop(L, 1);  // So the last-used key is on top.
+        // stack = [.., key]
+      prefix = ", ";
+    }
+        // stack = [..]
+    printf("}");
+  }
+}
+
+static void print_item(lua_State *L, int i, int as_key) {
   int ltype = lua_type(L, i);
+  // Set up first, last and start and end delimiters.
+  const char *first = (as_key ? "[" : "");
+  const char *last  = (as_key ? "]" : "");
   switch(ltype) {
 
     case LUA_TNIL:
-      printf("nil");
+      printf("nil");  // This can't be a key, so we can ignore as_key here.
       return;
 
     case LUA_TNUMBER:
-      printf("%g", lua_tonumber(L, i));
+      printf("%s%g%s", first, lua_tonumber(L, i), last);
       return;
 
     case LUA_TBOOLEAN:
-      printf("%s", lua_toboolean(L, i) ? "true" : "false");
+      printf("%s%s%s", first, lua_toboolean(L, i) ? "true" : "false", last);
       return;
 
     case LUA_TSTRING:
-      printf("'%s'", lua_tostring(L, i));
+      {
+        const char *s = lua_tostring(L, i);
+        if (is_identifier(s) && as_key) {
+          printf("%s", s);
+        } else {
+          printf("%s'%s'%s", first, s, last);
+        }
+      }
       return;
 
     case LUA_TTABLE:
-      // TODO HERE
+      printf("%s", first);
+      print_table(L, i);
+      printf("%s", last);
       return;
 
     case LUA_TFUNCTION:
-      printf("function:");
+      printf("%sfunction:", first);
       break;
 
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
-      printf("userdata:");
+      printf("%suserdata:", first);
       break;
 
     case LUA_TTHREAD:
-      printf("thread:");
+      printf("%sthread:", first);
       break;
 
     default:
@@ -76,31 +168,31 @@ void print_stack_item(lua_State *L, int i) {
   }
 
   // If we reach here, then we've got a type that we print as a pointer.
-  printf("%p", lua_topointer(L, i));
+  printf("%p%s", lua_topointer(L, i), last);
 }
 
-void print_stack(lua_State *L) {
+static void print_stack(lua_State *L) {
   int n = lua_gettop(L);
   printf("stack:");
   for (int i = 1; i <=n; ++i) {
     printf(" ");
-    print_stack_item(L, i);
+    print_item(L, i, 0);  // 0 --> as_key
   }
   if (n == 0) printf(" <empty>");
   printf("\n");
 }
 
-void load_state(lua_State *L, FakeLuaState *fake_state) {
+static void load_state(lua_State *L, FakeLuaState *fake_state) {
 }
 
 // This function uses the global current_state as a save location.
 // This can work because Lua is single threaded.
-void save_state(lua_State *L) {
+static void save_state(lua_State *L) {
 }
 
 // This loads the states table onto the top of the stack.
 // It creates the table and sets it in the registry if it doesn't exist yet.
-void load_states_table(lua_State *L) {
+static void load_states_table(lua_State *L) {
   // The states table is stored in the registry with key states_table_key.
   // The registory is a table located at the pseudo-index LUA_REGISTRYINDEX.
       // stack = [..]
@@ -122,7 +214,7 @@ void load_states_table(lua_State *L) {
 
 // Functions that simulate the C API.
 
-int fake_luaL_newstate(lua_State *L) {
+static int fake_luaL_newstate(lua_State *L) {
   printf("%s\n", __FUNCTION__);
   print_stack(L);  // TEMP
       // stack = []
@@ -140,13 +232,13 @@ int fake_luaL_newstate(lua_State *L) {
   return 1;  // Number of values to return that are on the stack.
 }
 
-int fake_lua_pushnumber(lua_State *L) {
+static int fake_lua_pushnumber(lua_State *L) {
   printf("%s\n", __FUNCTION__);
   print_stack(L);  // TEMP
   return 0;  // Number of values to return that are on the stack.
 }
 
-int fake_lua_pushstring(lua_State *L) {
+static int fake_lua_pushstring(lua_State *L) {
   printf("%s\n", __FUNCTION__);
   print_stack(L);  // TEMP
   return 0;  // Number of values to return that are on the stack.
@@ -155,7 +247,7 @@ int fake_lua_pushstring(lua_State *L) {
 #define register_fn(lua_fn_name) \
   lua_register(L, #lua_fn_name, fake_ ## lua_fn_name)
 
-int setup_globals(lua_State *L) {
+static int setup_globals(lua_State *L) {
   printf("%s\n", __FUNCTION__);
   print_stack(L);  // TEMP
   register_fn(luaL_newstate);
