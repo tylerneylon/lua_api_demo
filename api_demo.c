@@ -10,8 +10,6 @@
 // values are used to save/load the Lua state being simulated.
 //
 
-// TODO NEXT Rename "fake" to "save" and "saveable".
-
 #include "lua.h"
 #include "lauxlib.h"
 
@@ -22,7 +20,7 @@
 
 
 #define states_table_key     "ApiDemo.States"
-#define fake_state_metatable "ApiDemo.Metatable"
+#define demo_state_metatable "ApiDemo.Metatable"
 
 
 // Internal typedefs.
@@ -207,7 +205,7 @@ static void load_states_table(lua_State *L) {
       // stack = [.., states_table]
 }
 
-static void load_state(lua_State *L, FakeLuaState *fake_state) {
+static void load_state(lua_State *L, FakeLuaState *demo_state) {
 
   // We expect every load_state to be paired by a following save_state call.
   // If that expectation is not met, this assert may be triggered.
@@ -219,29 +217,29 @@ static void load_state(lua_State *L, FakeLuaState *fake_state) {
   load_states_table(L);
       // stack = [states_table]
 
-  // Load the table for this fake_state.
-  lua_rawgeti(L, 1, fake_state->ref);
-      // stack = [states_table, fake_state_data]
+  // Load the table for this demo_state.
+  lua_rawgeti(L, 1, demo_state->ref);
+      // stack = [states_table, demo_state_data]
   lua_remove(L, 1);
-      // stack = [fake_state_data]
+      // stack = [demo_state_data]
 
   // Load the state.
   lua_getfield(L, 1, "num_items");
-      // stack = [fake_state_data, num_items]
+      // stack = [demo_state_data, num_items]
   assert(lua_isnumber(L, 2));
   int num_items = lua_tointeger(L, 2);
   lua_pop(L, 1);
   for (int k = 1; k <= num_items; ++k) {
-      // stack = [fake_state_data, <first k-1 items of saved stack>]
+      // stack = [demo_state_data, <first k-1 items of saved stack>]
     lua_rawgeti(L, 1, k);
-      // stack = [fake_state_data, <first k-1 items of saved stack>, item[k]]
+      // stack = [demo_state_data, <first k-1 items of saved stack>, item[k]]
   }
-      // stack = [fake_state_data, <loaded state>]
+      // stack = [demo_state_data, <loaded state>]
   lua_remove(L, 1);
       // stack = [<loaded state>]
 
   // Set the current_state for later use.
-  current_state = fake_state;
+  current_state = demo_state;
 }
 
 // This function uses the global current_state as a save location.
@@ -253,25 +251,25 @@ static void save_state(lua_State *L) {
   load_states_table(L);
       // stack = [<state_to_save>, states_table]
 
-  // Load the table for this fake_state (in current_state).
+  // Load the table for this demo_state (in current_state).
   lua_rawgeti(L, -1, current_state->ref);
-      // stack = [<state_to_save>, states_table, fake_state_data]
+      // stack = [<state_to_save>, states_table, demo_state_data]
   lua_remove(L, -2);
-      // stack = [<state_to_save>, fake_state_data]
+      // stack = [<state_to_save>, demo_state_data]
 
   // Save num_items using the key "num_items".
   int num_items = lua_gettop(L) - 1;
   assert(num_items >= 0);
   lua_pushnumber(L, num_items);
-      // stack = [<state_to_save>, fake_state_data, num_items]
+      // stack = [<state_to_save>, demo_state_data, num_items]
   lua_setfield(L, -2, "num_items");
-      // stack = [<state_to_save>, fake_state_data]
+      // stack = [<state_to_save>, demo_state_data]
 
   // Set each item by int keys, counting up from 1.
   for (int k = 1; k <= num_items; ++k) {
-      // stack = [<state_to_save>, fake_state_data]
+      // stack = [<state_to_save>, demo_state_data]
     lua_pushvalue(L, k);
-      // stack = [<state_to_save>, fake_state_data, item[k]]
+      // stack = [<state_to_save>, demo_state_data, item[k]]
     lua_rawseti(L, -2, k);
   }
 
@@ -286,40 +284,40 @@ static void save_state(lua_State *L) {
 
 // Functions that simulate the C API.
 
-static int fake_luaL_newstate(lua_State *L) {
+static int demo_luaL_newstate(lua_State *L) {
   print_stack(L);  // TEMP
       // stack = []
-  FakeLuaState *fake_state =
+  FakeLuaState *demo_state =
       (FakeLuaState *)lua_newuserdata(L, sizeof(FakeLuaState));
-      // stack = [fake_L]
-  luaL_getmetatable(L, fake_state_metatable);
-      // stack = [fake_L, mt]
+      // stack = [demo_L]
+  luaL_getmetatable(L, demo_state_metatable);
+      // stack = [demo_L, mt]
   lua_setmetatable(L, 1);
-      // stack = [fake_L]
+      // stack = [demo_L]
   load_states_table(L);
-      // stack = [fake_L, states_table]
+      // stack = [demo_L, states_table]
   lua_newtable(L);
-      // stack = [fake_L, states_table, fake_state_data = {}]
+      // stack = [demo_L, states_table, demo_state_data = {}]
   lua_pushnumber(L, 0);
-      // stack = [fake_L, states_table, fake_state_data, 0]
+      // stack = [demo_L, states_table, demo_state_data, 0]
   lua_setfield(L, 3, "num_items");  // TODO Drop magic string.
-      // stack = [fake_L, states_table, fake_state_data]
-  fake_state->ref = luaL_ref(L, 2);  // Set states_table[ref] = fake_state_data.
-      // stack = [fake_L, states_table]
+      // stack = [demo_L, states_table, demo_state_data]
+  demo_state->ref = luaL_ref(L, 2);  // Set states_table[ref] = demo_state_data.
+      // stack = [demo_L, states_table]
   lua_pop(L, 1);
-      // stack = [fake_L]
+      // stack = [demo_L]
   return 1;  // Number of values to return that are on the stack.
 }
 
-static int fake_lua_pushnumber(lua_State *L) {
+static int demo_lua_pushnumber(lua_State *L) {
 
   // Read in inputs.
-  FakeLuaState *fake_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
   lua_Number n = luaL_checknumber(L, 2);
 
   // Simulate and print.
-  load_state(L, fake_state);
+  load_state(L, demo_state);
   lua_pushnumber(L, n);
   print_stack(L);
   save_state(L);
@@ -327,15 +325,15 @@ static int fake_lua_pushnumber(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
-static int fake_lua_pushstring(lua_State *L) {
+static int demo_lua_pushstring(lua_State *L) {
 
   // Read in inputs.
-  FakeLuaState *fake_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
   const char *s = luaL_checkstring(L, 2);
 
   // Simulate and print.
-  load_state(L, fake_state);
+  load_state(L, demo_state);
   lua_pushstring(L, s);
   print_stack(L);
   save_state(L);
@@ -343,15 +341,15 @@ static int fake_lua_pushstring(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
-static int fake_lua_insert(lua_State *L) {
+static int demo_lua_insert(lua_State *L) {
 
   // Read in inputs.
-  FakeLuaState *fake_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
   int i = luaL_checkint(L, 2);
 
   // Simulate and print.
-  load_state(L, fake_state);
+  load_state(L, demo_state);
   lua_insert(L, i);
   print_stack(L);
   save_state(L);
@@ -359,15 +357,15 @@ static int fake_lua_insert(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
-static int fake_lua_pop(lua_State *L) {
+static int demo_lua_pop(lua_State *L) {
 
   // Read in inputs.
-  FakeLuaState *fake_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
   int n = luaL_checkint(L, 2);
 
   // Simulate and print.
-  load_state(L, fake_state);
+  load_state(L, demo_state);
   lua_pop(L, n);
   print_stack(L);
   save_state(L);
@@ -375,15 +373,15 @@ static int fake_lua_pop(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
-static int fake_lua_getglobal(lua_State *L) {
+static int demo_lua_getglobal(lua_State *L) {
 
   // Read in inputs.
-  FakeLuaState *fake_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
   const char *s = luaL_checkstring(L, 2);
 
   // Simulate and print.
-  load_state(L, fake_state);
+  load_state(L, demo_state);
   lua_getglobal(L, s);
   print_stack(L);
   save_state(L);
@@ -392,7 +390,7 @@ static int fake_lua_getglobal(lua_State *L) {
 }
 
 #define register_fn(lua_fn_name) \
-  lua_register(L, #lua_fn_name, fake_ ## lua_fn_name)
+  lua_register(L, #lua_fn_name, demo_ ## lua_fn_name)
 
 static int setup_globals(lua_State *L) {
   printf("%s\n", __FUNCTION__);
@@ -412,8 +410,8 @@ int luaopen_api_demo(lua_State *L) {
   // This table is empty and only used to verify that the userdata instances we
   // receive are valid.
       // stack = []
-  luaL_newmetatable(L, fake_state_metatable);
-      // stack = [mt = fake_state_metatable]
+  luaL_newmetatable(L, demo_state_metatable);
+      // stack = [mt = demo_state_metatable]
   lua_pop(L, 1);
       // stack = []
 
