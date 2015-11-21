@@ -287,7 +287,6 @@ static void save_state(lua_State *L) {
 // Functions that simulate the C API.
 
 static int fake_luaL_newstate(lua_State *L) {
-  printf("%s\n", __FUNCTION__);
   print_stack(L);  // TEMP
       // stack = []
   FakeLuaState *fake_state =
@@ -313,7 +312,6 @@ static int fake_luaL_newstate(lua_State *L) {
 }
 
 static int fake_lua_pushnumber(lua_State *L) {
-  printf("%s\n", __FUNCTION__);
 
   // Read in inputs.
   FakeLuaState *fake_state =
@@ -330,7 +328,6 @@ static int fake_lua_pushnumber(lua_State *L) {
 }
 
 static int fake_lua_pushstring(lua_State *L) {
-  printf("%s\n", __FUNCTION__);
 
   // Read in inputs.
   FakeLuaState *fake_state =
@@ -346,6 +343,54 @@ static int fake_lua_pushstring(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
+static int fake_lua_insert(lua_State *L) {
+
+  // Read in inputs.
+  FakeLuaState *fake_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  int i = luaL_checkint(L, 2);
+
+  // Simulate and print.
+  load_state(L, fake_state);
+  lua_insert(L, i);
+  print_stack(L);
+  save_state(L);
+
+  return 0;  // Number of values to return that are on the stack.
+}
+
+static int fake_lua_pop(lua_State *L) {
+
+  // Read in inputs.
+  FakeLuaState *fake_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  int n = luaL_checkint(L, 2);
+
+  // Simulate and print.
+  load_state(L, fake_state);
+  lua_pop(L, n);
+  print_stack(L);
+  save_state(L);
+
+  return 0;  // Number of values to return that are on the stack.
+}
+
+static int fake_lua_getglobal(lua_State *L) {
+
+  // Read in inputs.
+  FakeLuaState *fake_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, fake_state_metatable);
+  const char *s = luaL_checkstring(L, 2);
+
+  // Simulate and print.
+  load_state(L, fake_state);
+  lua_getglobal(L, s);
+  print_stack(L);
+  save_state(L);
+
+  return 0;  // Number of values to return that are on the stack.
+}
+
 #define register_fn(lua_fn_name) \
   lua_register(L, #lua_fn_name, fake_ ## lua_fn_name)
 
@@ -355,6 +400,9 @@ static int setup_globals(lua_State *L) {
   register_fn(luaL_newstate);
   register_fn(lua_pushnumber);
   register_fn(lua_pushstring);
+  register_fn(lua_insert);
+  register_fn(lua_pop);
+  register_fn(lua_getglobal);
   return 0;  // Number of values to return that are on the stack.
 }
 
