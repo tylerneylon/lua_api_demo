@@ -309,85 +309,127 @@ static int demo_luaL_newstate(lua_State *L) {
   return 1;  // Number of values to return that are on the stack.
 }
 
-static int demo_lua_pushnumber(lua_State *L) {
 
-  // Read in inputs.
-  FakeLuaState *demo_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
-  lua_Number n = luaL_checknumber(L, 2);
+// Macros that make it easy to wrap Lua C API functions.
 
-  // Simulate and print.
-  load_state(L, demo_state);
-  lua_pushnumber(L, n);
-  print_stack(L);
-  save_state(L);
+#define fn_start(lua_fn_name)                                             \
+  static int demo_ ## lua_fn_name(lua_State *L) {                         \
+    FakeLuaState *demo_state =                                            \
+        (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
 
-  return 0;  // Number of values to return that are on the stack.
-}
+#define fn_end                        \
+    print_stack(L);                   \
+    save_state(L);                    \
+    return 0;                         \
+  }
 
-static int demo_lua_pushstring(lua_State *L) {
+#define fn_end_number_out             \
+    print_stack(L);                   \
+    save_state(L);                    \
+    lua_pushnumber(L, out1);          \
+    return 1;                         \
+  }
 
-  // Read in inputs.
-  FakeLuaState *demo_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
-  const char *s = luaL_checkstring(L, 2);
+#define fn_end_0_arg(lua_fn_name)     \
+    load_state(L, demo_state);        \
+    lua_fn_name(L);                   \
+    fn_end
 
-  // Simulate and print.
-  load_state(L, demo_state);
-  lua_pushstring(L, s);
-  print_stack(L);
-  save_state(L);
+#define fn_end_1_arg(lua_fn_name)     \
+    load_state(L, demo_state);        \
+    lua_fn_name(L, arg1);             \
+    fn_end
 
-  return 0;  // Number of values to return that are on the stack.
-}
+#define fn_end_2_arg(lua_fn_name)     \
+    load_state(L, demo_state);        \
+    lua_fn_name(L, arg1, arg2);       \
+    fn_end
 
-static int demo_lua_insert(lua_State *L) {
+#define fn_end_1_arg_1_out(lua_fn_name)     \
+    load_state(L, demo_state);              \
+    int out1 = lua_fn_name(L, arg1);        \
+    fn_end_number_out
 
-  // Read in inputs.
-  FakeLuaState *demo_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
-  int i = luaL_checkint(L, 2);
+#define fn_end_nothing_in(lua_fn_name)       \
+    fn_end_0_arg(lua_fn_name)
 
-  // Simulate and print.
-  load_state(L, demo_state);
-  lua_insert(L, i);
-  print_stack(L);
-  save_state(L);
+#define fn_end_int_in(lua_fn_name)       \
+    int arg1 = luaL_checkint(L, 2);      \
+    fn_end_1_arg(lua_fn_name)
 
-  return 0;  // Number of values to return that are on the stack.
-}
+#define fn_end_string_in(lua_fn_name)            \
+    const char *arg1 = luaL_checkstring(L, 2);   \
+    fn_end_1_arg(lua_fn_name)
 
-static int demo_lua_pop(lua_State *L) {
+#define fn_end_int_string_in(lua_fn_name)        \
+    int arg1 = luaL_checkint(L, 2);              \
+    const char *arg2 = luaL_checkstring(L, 3);   \
+    fn_end_2_arg(lua_fn_name)
 
-  // Read in inputs.
-  FakeLuaState *demo_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
-  int n = luaL_checkint(L, 2);
+#define fn_end_number_in(lua_fn_name)            \
+    lua_Number arg1 = luaL_checknumber(L, 2);    \
+    fn_end_1_arg(lua_fn_name)
 
-  // Simulate and print.
-  load_state(L, demo_state);
-  lua_pop(L, n);
-  print_stack(L);
-  save_state(L);
+#define fn_end_int_in_int_out(lua_fn_name)    \
+    int arg1 = luaL_checkint(L, 2);           \
+    fn_end_1_arg_1_out(lua_fn_name)
 
-  return 0;  // Number of values to return that are on the stack.
-}
 
-static int demo_lua_getglobal(lua_State *L) {
+// Wrappers around C API functions defined using the above macros.
 
-  // Read in inputs.
-  FakeLuaState *demo_state =
-      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
-  const char *s = luaL_checkstring(L, 2);
+fn_start(lua_pop);
+fn_end_int_in(lua_pop);
 
-  // Simulate and print.
-  load_state(L, demo_state);
-  lua_getglobal(L, s);
-  print_stack(L);
-  save_state(L);
+fn_start(lua_insert);
+fn_end_int_in(lua_insert);
 
-  return 0;  // Number of values to return that are on the stack.
-}
+fn_start(lua_pushvalue);
+fn_end_int_in(lua_pushvalue);
+
+fn_start(lua_rawget);
+fn_end_int_in(lua_rawget);
+
+fn_start(lua_pushstring);
+fn_end_string_in(lua_pushstring);
+
+fn_start(lua_pushnumber);
+fn_end_number_in(lua_pushnumber);
+
+fn_start(lua_getglobal);
+fn_end_string_in(lua_getglobal);
+
+fn_start(lua_isnil);
+fn_end_int_in_int_out(lua_isnil);
+
+fn_start(lua_isnone);
+fn_end_int_in_int_out(lua_isnone);
+
+fn_start(lua_isnoneornil);
+fn_end_int_in_int_out(lua_isnoneornil);
+
+fn_start(lua_isnumber);
+fn_end_int_in_int_out(lua_isnumber);
+
+fn_start(lua_istable);
+fn_end_int_in_int_out(lua_istable);
+
+fn_start(lua_isstring);
+fn_end_int_in_int_out(lua_isstring);
+
+fn_start(lua_pushnil);
+fn_end_nothing_in(lua_pushnil);
+
+fn_start(lua_newtable);
+fn_end_nothing_in(lua_newtable);
+
+fn_start(lua_getfield);
+fn_end_int_string_in(lua_getfield);
+
+fn_start(lua_setfield);
+fn_end_int_string_in(lua_setfield);
+
+// A single Lua-facing function to register all our C-API-like functions in a
+// single go.
 
 #define register_fn(lua_fn_name) \
   lua_register(L, #lua_fn_name, demo_ ## lua_fn_name)
@@ -401,6 +443,18 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_insert);
   register_fn(lua_pop);
   register_fn(lua_getglobal);
+  register_fn(lua_isnil);
+  register_fn(lua_pushnil);
+  register_fn(lua_pushvalue);
+  register_fn(lua_rawget);
+  register_fn(lua_newtable);
+  register_fn(lua_isnone);
+  register_fn(lua_isnoneornil);
+  register_fn(lua_isnumber);
+  register_fn(lua_isstring);
+  register_fn(lua_istable);
+  register_fn(lua_getfield);
+  register_fn(lua_setfield);
   return 0;  // Number of values to return that are on the stack.
 }
 
