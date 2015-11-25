@@ -10,6 +10,10 @@
 // values are used to save/load the Lua state being simulated.
 //
 
+// TODO
+//  * Add constants for Lua types.
+//  * Add constants for pseudo-indexes.
+
 #include "lua.h"
 #include "lauxlib.h"
 
@@ -173,10 +177,10 @@ static void print_item(lua_State *L, int i, int as_key) {
   printf("%p%s", lua_topointer(L, i), last);
 }
 
-static void print_stack(lua_State *L) {
-  int n = lua_gettop(L);
+static void print_stack(lua_State *L, int omit) {
+  int n = lua_gettop(L) - omit;
   printf("stack:");
-  for (int i = 1; i <=n; ++i) {
+  for (int i = 1; i <= n; ++i) {
     printf(" ");
     print_item(L, i, 0);  // 0 --> as_key
   }
@@ -244,7 +248,7 @@ static void load_state(lua_State *L, FakeLuaState *demo_state) {
 
 // This function uses the global current_state as a save location.
 // This can work because Lua is single threaded.
-static void save_state(lua_State *L) {
+static void save_state(lua_State *L, int omit) {
 
   // Load the states table.
       // stack = [<state_to_save>]
@@ -258,8 +262,9 @@ static void save_state(lua_State *L) {
       // stack = [<state_to_save>, demo_state_data]
 
   // Save num_items using the key "num_items".
-  int num_items = lua_gettop(L) - 1;
-  assert(num_items >= 0);
+  int num_items = lua_gettop(L) - 1 - omit;
+  assert(num_items + omit >= 0);
+  if (num_items < 0) num_items = 0;  // The omit value may have been high.
   lua_pushnumber(L, num_items);
       // stack = [<state_to_save>, demo_state_data, num_items]
   lua_setfield(L, -2, "num_items");
@@ -272,10 +277,9 @@ static void save_state(lua_State *L) {
       // stack = [<state_to_save>, demo_state_data, item[k]]
     lua_rawseti(L, -2, k);
   }
-
-  // Clear the actual Lua stack.
-  lua_settop(L, 0);
-      // stack = []
+      // stack = [<state_to_save>, demo_state_data]
+  lua_pop(L, 1);
+      // stack = [<state_to_save>]
 
   // Clear current_state.
   current_state = NULL;
@@ -285,7 +289,6 @@ static void save_state(lua_State *L) {
 // Functions that simulate the C API.
 
 static int demo_luaL_newstate(lua_State *L) {
-  print_stack(L);  // TEMP
       // stack = []
   FakeLuaState *demo_state =
       (FakeLuaState *)lua_newuserdata(L, sizeof(FakeLuaState));
@@ -318,21 +321,21 @@ static int demo_luaL_newstate(lua_State *L) {
         (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
 
 #define fn_end                        \
-    print_stack(L);                   \
-    save_state(L);                    \
+    print_stack(L, 0);                \
+    save_state(L, 0);                 \
     return 0;                         \
   }
 
 #define fn_end_number_out             \
-    print_stack(L);                   \
-    save_state(L);                    \
+    print_stack(L, 0);                \
+    save_state(L, 0);                 \
     lua_pushnumber(L, out1);          \
     return 1;                         \
   }
 
 #define fn_end_string_out             \
-    print_stack(L);                   \
-    save_state(L);                    \
+    print_stack(L, 0);                \
+    save_state(L, 0);                 \
     if (out1) {                       \
       lua_pushstring(L, out1);        \
     } else {                          \
@@ -461,15 +464,34 @@ fn_int_string_in       (lua_setfield);
 fn_int_in              (lua_settop);
 fn_int_in_int_out      (lua_toboolean);
 fn_int_in_int_out      (lua_tointeger);
-fn_int_in_int_out      (lua_tonumber);
 fn_int_in_string_out   (lua_tostring);
+fn_int_in_int_out      (lua_type);
+fn_int_in_string_out   (lua_typename);
+
+fn_int_in_string_out   (luaL_typename);
 
 
 // Function wrappers that need special-case code.
 
 // TODO Special cases that aren't worth their effort to define using macros:
-//   * lua_error
-//   * lua_tolstring
+//   * lua_error        <doesn't return>
+//   * lua_tolstring    [int (ignore)] -> string
+//   * lua_tonumber     [int] -> double
+//   * luaL_optint      [int int] -> int
+//   * luaL_optnumber   [int double] -> double
+//   * luaL_optstring   [int string] -> string
+
+// This is a special case function as it doesn't return; yet we'd still like to
+// leave in a valid state as the encompassing Lua environment may continue to
+// run.
+int demo_lua_error(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  load_state(L, demo_state);
+  print_stack(L, 1);  // 1 --> tail values to omit
+  save_state(L, 1);   // 1 --> tail values to omit
+  return lua_error(L);
+}
 
 // A single Lua-facing function to register all our C-API-like functions in a
 // single go.
@@ -490,6 +512,7 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_getmetatable);
   register_fn(lua_gettable);
   register_fn(lua_gettop);
+  register_fn(lua_error);
   register_fn(lua_insert);
   register_fn(lua_isboolean);
   register_fn(lua_isfunction);
@@ -516,8 +539,11 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_settop);
   register_fn(lua_toboolean);
   register_fn(lua_tointeger);
-  register_fn(lua_tonumber);
   register_fn(lua_tostring);
+  register_fn(lua_type);
+  register_fn(lua_typename);
+
+  register_fn(luaL_typename);
 
   // Set up C-like constants.
   lua_pushnumber(L, 0);
