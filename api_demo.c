@@ -10,10 +10,6 @@
 // values are used to save/load the Lua state being simulated.
 //
 
-// TODO
-//  * Add constants for Lua types.
-//  * Add constants for pseudo-indexes.
-
 #include "lua.h"
 #include "lauxlib.h"
 
@@ -608,6 +604,10 @@ int demo_lua_pcall(lua_State *L) {
 #define register_fn(lua_fn_name) \
   lua_register(L, #lua_fn_name, demo_ ## lua_fn_name)
 
+#define register_const(const_name)             \
+  lua_pushnumber(L, (lua_Number)const_name);   \
+  lua_setglobal(L, #const_name);
+
 static int setup_globals(lua_State *L) {
   register_fn(luaL_newstate);
 
@@ -684,6 +684,28 @@ static int setup_globals(lua_State *L) {
   // Set up C-like constants.
   lua_pushnumber(L, 0);
   lua_setglobal(L, "NULL");
+
+  register_const(LUA_ERRRUN);
+  register_const(LUA_ERRSYNTAX);
+  register_const(LUA_ERRMEM);
+  register_const(LUA_ERRERR);
+  register_const(LUA_ERRFILE);
+
+  register_const(LUA_TNONE);
+  register_const(LUA_TNIL);
+  register_const(LUA_TBOOLEAN);
+  register_const(LUA_TLIGHTUSERDATA);
+  register_const(LUA_TNUMBER);
+  register_const(LUA_TSTRING);
+  register_const(LUA_TTABLE);
+  register_const(LUA_TFUNCTION);
+  register_const(LUA_TUSERDATA);
+  register_const(LUA_TTHREAD);
+
+  register_const(LUA_REGISTRYINDEX);
+  register_const(LUA_GLOBALSINDEX);
+
+  register_const(LUA_MULTRET);
 
   return 0;  // Number of values to return that are on the stack.
 }
