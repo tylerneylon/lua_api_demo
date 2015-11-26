@@ -23,8 +23,8 @@
 #include <string.h>
 
 
-#define states_table_key     "ApiDemo.States"
-#define demo_state_metatable "ApiDemo.Metatable"
+#define states_table_key     "ApiDemo.SavedStates"
+#define demo_state_metatable "ApiDemo.LuaState"
 
 
 // Internal typedefs.
@@ -516,19 +516,14 @@ fn_string_in_int_out      (luaL_dostring);
 fn_int_string_in_int_out  (luaL_getmetafield);
 fn_string_in_int_out      (luaL_loadfile);
 fn_string_in_int_out      (luaL_loadstring);
+// Defined below:          luaL_optint
+// Defined below:          luaL_optnumber
+// Defined below:          luaL_optstring
 fn_int_in_string_out      (luaL_typename);
 fn_int_string_in_int_out  (luaL_typerror);
 
 
 // Function wrappers that need special-case code.
-
-// TODO Special cases that aren't worth their effort to define using macros:
-//   * lua_tolstring      [int (ignore)] -> string
-//   * lua_tonumber       [int] -> double
-//   * luaL_optint        [int int] -> int
-//   * luaL_optnumber     [int double] -> double
-//   * luaL_optstring     [int string] -> string
-//   * lua_pcall          [int int int] -> int
 
 // This is a special case function as it doesn't return; yet we'd still like to
 // leave in a valid state as the encompassing Lua environment may continue to
@@ -542,8 +537,73 @@ int demo_lua_error(lua_State *L) {
   return lua_error(L);
 }
 
-// A single Lua-facing function to register all our C-API-like functions in a
-// single go.
+int demo_lua_tolstring(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  int arg1 = luaL_checkint(L, 2);
+  load_state(L, demo_state);
+  const char *out1 = lua_tolstring(L, arg1, NULL);  // NULL --> *len
+  print_stack(L, 0);  // 0 --> tail values to omit
+  save_state(L, 0);   // 0 --> tail values to omit
+  lua_pushstring(L, out1);
+  return 1;  // Number of values to return that are on the stack.
+}
+
+int demo_luaL_optint(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  int arg1 = luaL_checkint(L, 2);
+  int arg2 = luaL_checkint(L, 3);
+  load_state(L, demo_state);
+  int out1 = luaL_optint(L, arg1, arg2);
+  print_stack(L, 0);  // 0 --> tail values to omit
+  save_state(L, 0);   // 0 --> tail values to omit
+  lua_pushnumber(L, out1);
+  return 1;  // Number of values to return that are on the stack.
+}
+
+int demo_luaL_optnumber(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  int arg1 = luaL_checkint(L, 2);
+  double arg2 = luaL_checknumber(L, 3);
+  load_state(L, demo_state);
+  double out1 = luaL_optnumber(L, arg1, arg2);
+  print_stack(L, 0);  // 0 --> tail values to omit
+  save_state(L, 0);   // 0 --> tail values to omit
+  lua_pushnumber(L, out1);
+  return 1;  // Number of values to return that are on the stack.
+}
+
+int demo_luaL_optstring(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  int arg1 = luaL_checkint(L, 2);
+  const char *arg2 = luaL_checkstring(L, 3);
+  load_state(L, demo_state);
+  const char *out1 = luaL_optstring(L, arg1, arg2);
+  print_stack(L, 0);  // 0 --> tail values to omit
+  save_state(L, 0);   // 0 --> tail values to omit
+  lua_pushstring(L, out1);
+  return 1;  // Number of values to return that are on the stack.
+}
+
+int demo_lua_pcall(lua_State *L) {
+  FakeLuaState *demo_state =
+      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+  int arg1 = luaL_checkint(L, 2);
+  int arg2 = luaL_checkint(L, 3);
+  int arg3 = luaL_checkint(L, 4);
+  load_state(L, demo_state);
+  int out1 = lua_pcall(L, arg1, arg2, arg3);
+  print_stack(L, 0);  // 0 --> tail values to omit
+  save_state(L, 0);   // 0 --> tail values to omit
+  lua_pushnumber(L, out1);
+  return 1;  // Number of values to return that are on the stack.
+}
+
+// setup_globals is a single Lua-facing function to register all our C-API-like
+// functions in a single go.
 
 #define register_fn(lua_fn_name) \
   lua_register(L, #lua_fn_name, demo_ ## lua_fn_name)
@@ -575,6 +635,7 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_newtable);
   register_fn(lua_next);
   register_fn(lua_objlen);
+  register_fn(lua_pcall);
   register_fn(lua_pop);
   register_fn(lua_pushboolean);
   register_fn(lua_pushlstring);
@@ -596,6 +657,7 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_settop);
   register_fn(lua_toboolean);
   register_fn(lua_tointeger);
+  register_fn(lua_tolstring);
   register_fn(lua_tonumber);
   register_fn(lua_tostring);
   register_fn(lua_type);
@@ -613,6 +675,9 @@ static int setup_globals(lua_State *L) {
   register_fn(luaL_getmetafield);
   register_fn(luaL_loadfile);
   register_fn(luaL_loadstring);
+  register_fn(luaL_optint);
+  register_fn(luaL_optnumber);
+  register_fn(luaL_optstring);
   register_fn(luaL_typename);
   register_fn(luaL_typerror);
 
