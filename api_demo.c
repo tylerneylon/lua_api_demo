@@ -364,6 +364,16 @@ static int demo_luaL_newstate(lua_State *L) {
     int out1 = lua_fn_name(L, arg1);        \
     fn_end_number_out
 
+#define fn_end_2_arg_1_out(lua_fn_name)     \
+    load_state(L, demo_state);              \
+    int out1 = lua_fn_name(L, arg1, arg2);  \
+    fn_end_number_out
+
+#define fn_end_1_arg_double_out(lua_fn_name)    \
+    load_state(L, demo_state);                  \
+    double out1 = lua_fn_name(L, arg1);         \
+    fn_end_number_out
+
 #define fn_end_1_arg_str_out(lua_fn_name)       \
     load_state(L, demo_state);                  \
     const char *out1 = lua_fn_name(L, arg1);    \
@@ -420,9 +430,25 @@ static int demo_luaL_newstate(lua_State *L) {
     int arg1 = luaL_checkint(L, 2);       \
     fn_end_1_arg_1_out(lua_fn_name)
 
+#define fn_int_in_double_out(lua_fn_name)   \
+    fn_start(lua_fn_name);                  \
+    int arg1 = luaL_checkint(L, 2);         \
+    fn_end_1_arg_double_out(lua_fn_name)
+
+#define fn_int_string_in_int_out(lua_fn_name)    \
+    fn_start(lua_fn_name);                       \
+    int arg1 = luaL_checkint(L, 2);              \
+    const char *arg2 = luaL_checkstring(L, 3);   \
+    fn_end_2_arg_1_out(lua_fn_name)
+
+#define fn_string_in_int_out(lua_fn_name)        \
+    fn_start(lua_fn_name);                       \
+    const char *arg1 = luaL_checkstring(L, 2);   \
+    fn_end_1_arg_1_out(lua_fn_name)
+
 #define fn_int_in_string_out(lua_fn_name)    \
-    fn_start(lua_fn_name);                \
-    int arg1 = luaL_checkint(L, 2);       \
+    fn_start(lua_fn_name);                   \
+    int arg1 = luaL_checkint(L, 2);          \
     fn_end_1_arg_str_out(lua_fn_name)
 
 
@@ -438,6 +464,7 @@ fn_string_in           (lua_getglobal);
 fn_int_in_int_out      (lua_getmetatable);
 fn_int_in              (lua_gettable);
 fn_nothing_in_int_out  (lua_gettop);
+// Defined below:       lua_error
 fn_int_in              (lua_insert);
 fn_int_in_int_out      (lua_isboolean);
 fn_int_in_int_out      (lua_isfunction);
@@ -449,6 +476,8 @@ fn_int_in_int_out      (lua_isstring);
 fn_int_in_int_out      (lua_istable);
 fn_int_int_in          (lua_lessthan);
 fn_nothing_in          (lua_newtable);
+fn_int_in_int_out      (lua_next);
+fn_int_in_int_out      (lua_objlen);
 fn_int_in              (lua_pop);
 fn_int_in              (lua_pushboolean);
 fn_string_int_in       (lua_pushlstring);
@@ -458,28 +487,48 @@ fn_string_in           (lua_pushstring);
 fn_int_in              (lua_pushvalue);
 fn_int_int_in          (lua_rawequal);
 fn_int_in              (lua_rawget);
+fn_int_int_in          (lua_rawgeti);
+fn_int_in              (lua_rawset);
+fn_int_int_in          (lua_rawseti);
 fn_int_in              (lua_remove);
 fn_int_in              (lua_replace);
 fn_int_string_in       (lua_setfield);
+fn_string_in           (lua_setglobal);
+fn_int_in_int_out      (lua_setmetatable);
+fn_int_in              (lua_settable);
 fn_int_in              (lua_settop);
 fn_int_in_int_out      (lua_toboolean);
 fn_int_in_int_out      (lua_tointeger);
+fn_int_in_double_out   (lua_tonumber);
 fn_int_in_string_out   (lua_tostring);
 fn_int_in_int_out      (lua_type);
 fn_int_in_string_out   (lua_typename);
 
-fn_int_in_string_out   (luaL_typename);
+fn_int_string_in_int_out  (luaL_argerror);
+fn_int_string_in_int_out  (luaL_callmeta);
+fn_int_in                 (luaL_checkany);
+fn_int_in_int_out         (luaL_checkint);
+fn_int_in_double_out      (luaL_checknumber);
+fn_int_in_string_out      (luaL_checkstring);
+fn_int_int_in             (luaL_checktype);
+fn_string_in_int_out      (luaL_dofile);
+fn_string_in_int_out      (luaL_dostring);
+fn_int_string_in_int_out  (luaL_getmetafield);
+fn_string_in_int_out      (luaL_loadfile);
+fn_string_in_int_out      (luaL_loadstring);
+fn_int_in_string_out      (luaL_typename);
+fn_int_string_in_int_out  (luaL_typerror);
 
 
 // Function wrappers that need special-case code.
 
 // TODO Special cases that aren't worth their effort to define using macros:
-//   * lua_error        <doesn't return>
-//   * lua_tolstring    [int (ignore)] -> string
-//   * lua_tonumber     [int] -> double
-//   * luaL_optint      [int int] -> int
-//   * luaL_optnumber   [int double] -> double
-//   * luaL_optstring   [int string] -> string
+//   * lua_tolstring      [int (ignore)] -> string
+//   * lua_tonumber       [int] -> double
+//   * luaL_optint        [int int] -> int
+//   * luaL_optnumber     [int double] -> double
+//   * luaL_optstring     [int string] -> string
+//   * lua_pcall          [int int int] -> int
 
 // This is a special case function as it doesn't return; yet we'd still like to
 // leave in a valid state as the encompassing Lua environment may continue to
@@ -524,6 +573,8 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_istable);
   register_fn(lua_lessthan);
   register_fn(lua_newtable);
+  register_fn(lua_next);
+  register_fn(lua_objlen);
   register_fn(lua_pop);
   register_fn(lua_pushboolean);
   register_fn(lua_pushlstring);
@@ -533,17 +584,37 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_pushvalue);
   register_fn(lua_rawequal);
   register_fn(lua_rawget);
+  register_fn(lua_rawgeti);
+  register_fn(lua_rawset);
+  register_fn(lua_rawseti);
   register_fn(lua_remove);
   register_fn(lua_replace);
   register_fn(lua_setfield);
+  register_fn(lua_setglobal);
+  register_fn(lua_setmetatable);
+  register_fn(lua_settable);
   register_fn(lua_settop);
   register_fn(lua_toboolean);
   register_fn(lua_tointeger);
+  register_fn(lua_tonumber);
   register_fn(lua_tostring);
   register_fn(lua_type);
   register_fn(lua_typename);
 
+  register_fn(luaL_argerror);
+  register_fn(luaL_callmeta);
+  register_fn(luaL_checkany);
+  register_fn(luaL_checkint);
+  register_fn(luaL_checknumber);
+  register_fn(luaL_checkstring);
+  register_fn(luaL_checktype);
+  register_fn(luaL_dofile);
+  register_fn(luaL_dostring);
+  register_fn(luaL_getmetafield);
+  register_fn(luaL_loadfile);
+  register_fn(luaL_loadstring);
   register_fn(luaL_typename);
+  register_fn(luaL_typerror);
 
   // Set up C-like constants.
   lua_pushnumber(L, 0);
