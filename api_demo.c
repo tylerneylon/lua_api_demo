@@ -5,9 +5,10 @@
 //
 // Implementation notes:
 //
-// This module maintains a table in the registry with the key "ApiDemo.States".
-// The keys in this table are references controlled by luaL_{ref,unref}, and the
-// values are used to save/load the Lua state being simulated.
+// This module maintains a table in the registry with the key
+// "ApiDemo.SavedStates". The keys in this table are references controlled by
+// luaL_{ref,unref}, and the values are used to save/load the Lua state being
+// simulated.
 //
 
 #include "lua.h"
