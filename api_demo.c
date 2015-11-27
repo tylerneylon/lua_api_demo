@@ -24,19 +24,21 @@
 #define demo_state_metatable "ApiDemo.LuaState"
 
 
-// Internal typedefs.
+// # Internal typedefs.
 
 typedef struct {
   int ref;
 } FakeLuaState;
 
 
-// Internal globals.
+// # Internal globals.
 
 static FakeLuaState *current_state;
 
 
-// Internal functions.
+// # Internal functions.
+
+// ## Functions used to print the stack.
 
 static void print_item(lua_State *L, int i, int as_key);
 
@@ -185,6 +187,9 @@ static void print_stack(lua_State *L, int omit) {
   printf("\n");
 }
 
+
+// ## Functions for loading and saving demo Lua states.
+
 // This loads the states table onto the top of the stack.
 // It creates the table and sets it in the registry if it doesn't exist yet.
 static void load_states_table(lua_State *L) {
@@ -282,8 +287,7 @@ static void save_state(lua_State *L, int omit) {
   current_state = NULL;
 }
 
-
-// Functions that simulate the C API.
+// ## Functions that simulate the C API.
 
 static int demo_luaL_newstate(lua_State *L) {
       // stack = []
@@ -309,8 +313,42 @@ static int demo_luaL_newstate(lua_State *L) {
   return 1;  // Number of values to return that are on the stack.
 }
 
+// ### Macros that make it easy to wrap Lua C API functions.
 
-// Macros that make it easy to wrap Lua C API functions.
+// A typical wrapper function will look something like this pseudocode:
+//
+// static int demo_lua_dosomething(lua_State *L) {
+//  FakeLuaState *demo_state =
+//      (FakeLuaState *)luaL_checkudata(L, 1, demo_state_metatable);
+//  intype1 arg1 = luaL_checktype1(L, 2);
+//  intype2 arg2 = luaL_checktype2(L, 3);
+//  load_state(L, demo_state);
+//  outtype out = lua_dosomething(L, arg1, arg2);
+//  print_stack(L, 0);  // 0 --> omit 0 tail values
+//  save_stack(L, 0);   // 0 --> omit 0 tail values
+//  lua_pushouttype(L, out);
+//  return 1;
+// }
+//
+// In more natural language, the process works like this:
+// 1. Extract inputs from L.
+// 2. Load demo Lua state.
+// 3. Run the API function.
+// 4. Print the stack.
+// 5. Save the demo Lua state.
+// 6. Return any output values.
+//
+// Most of that code is identical for most API functions. The major differences
+// are the types and numbers of the inputs and outputs. The macros below help
+// simplify the creation of these wrapper functions. As an example, the API
+// functions lua_pushstring can be wrapped with this simple macro call:
+//
+// fn_string_in(lua_pushstring);
+//
+// In general, the final macros take the format:
+//
+// fn_<intype1>_<intype2>_in[_<outtype>_out] (lua_fn_name);
+//
 
 #define fn_start(lua_fn_name)                                             \
   static int demo_ ## lua_fn_name(lua_State *L) {                         \
@@ -448,8 +486,7 @@ static int demo_luaL_newstate(lua_State *L) {
     int arg1 = luaL_checkint(L, 2);          \
     fn_end_1_arg_str_out(lua_fn_name)
 
-
-// Wrappers around C API functions defined using the above macros.
+// ### Wrappers around C API functions defined using the above macros.
 
 // Please keep these alphabetized by API function name.
 fn_int_int_in          (lua_call);
@@ -519,8 +556,7 @@ fn_string_in_int_out      (luaL_loadstring);
 fn_int_in_string_out      (luaL_typename);
 fn_int_string_in_int_out  (luaL_typerror);
 
-
-// Function wrappers that need special-case code.
+// ### Function wrappers that need special-case code.
 
 // This is a special case function as it doesn't return; yet we'd still like to
 // leave in a valid state as the encompassing Lua environment may continue to
@@ -598,6 +634,8 @@ int demo_lua_pcall(lua_State *L) {
   lua_pushnumber(L, out1);
   return 1;  // Number of values to return that are on the stack.
 }
+
+// ### Define setup_globals.
 
 // setup_globals is a single Lua-facing function to register all our C-API-like
 // functions in a single go.
@@ -710,6 +748,8 @@ static int setup_globals(lua_State *L) {
 
   return 0;  // Number of values to return that are on the stack.
 }
+
+// ## The main entry point, and only directly public-facing function.
 
 int luaopen_api_demo(lua_State *L) {
 
