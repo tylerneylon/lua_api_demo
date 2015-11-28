@@ -24,6 +24,39 @@
 #define demo_state_metatable "ApiDemo.LuaState"
 
 
+// # The help string.
+
+const char *help_string =
+  "                                                                        \n"
+  "-- writing values to the stack ---------------------------------------- \n"
+  "                                                                        \n"
+  "     lua_pushboolean(L, int)                               [-0  +1  -]  \n"
+  " --- lua_pushfstring(L, str, ...)                          [-0  +1  m]  \n"
+  " --- lua_pushinteger(L, lua_Integer)                       [-0  +1  -]  \n"
+  "     lua_pushlstring(L, str, size_t)                       [-0  +1  m]  \n"
+  "     lua_pushnil(L)                                        [-0  +1  -]  \n"
+  "     lua_pushnumber(L, lua_Number)                         [-0  +1  -]  \n"
+  "     lua_pushstring(L, str)                                [-0  +1  m]  \n"
+  "                                                                        \n"
+  "                                                                        \n"
+  "-- stack manipulation ------------------------------------------------- \n"
+  "                                                                        \n"
+  " int lua_checkstack(L, int)          ensure stack capacity [-0  +0  m]  \n"
+  " int lua_gettop(L)                   get stack size        [-0  +0  -]  \n"
+  "     lua_insert(L, int i)            mv top -> i           [-1  +1  -]  \n"
+  "     lua_pushvalue(L, int i)         cp i -> top           [-0  +1  m]  \n"
+  "     lua_remove(L, int i)            rm i                  [-1  +0  -]  \n"
+  "     lua_replace(L, int i)           rm i, mv top -> i     [-1  +0  -]  \n"
+  "     lua_settop(L, int)              set stack size        [-?  +?  -]  \n"
+  "                                                                        \n"
+  "                                                                        \n"
+  "-- stack manipulation ------------------------------------------------- \n"
+  "                                                                        \n"
+  " int lua_isboolean(L, int i)         is stack[i] bool?     [-0 +0 -]    \n"
+  " int lua_isfunction(L, int i)        is stack[i] fn?       [-0 +0 -]    \n"
+  " int lua_isnil(L, int i)             is stack[i] nil?      [-0 +0 -]    \n";
+
+
 // # Internal typedefs.
 
 typedef struct {
@@ -31,7 +64,7 @@ typedef struct {
 } FakeLuaState;
 
 
-// # Internal globals.
+// # Internal globals, besides the help string.
 
 static FakeLuaState *current_state;
 
