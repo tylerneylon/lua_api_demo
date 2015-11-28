@@ -33,8 +33,8 @@ This module must be compiled before it can be used. Run the `make` shell command
 to build the file `api_demo.so`. A Lua interpreter or script run in the same
 directory will find this file when the standard `require` function is used. For
 global access, place this file, or a symlink to it, in any directory listed in
-your Lua's `package.cpath`. For example, if you're running Lua 5.3, this would
-work when run from this repo's directory:
+your Lua's `package.cpath`. For example, if you're running Lua 5.3, the
+following shell commands will work when run from this repo's directory:
 
     $ make
     $ sudo ln -s `pwd`/api_demo.so /usr/local/lib/lua/5.3/
