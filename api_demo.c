@@ -118,6 +118,38 @@ static void print_table(lua_State *L, int i) {
   }
 }
 
+static char *get_fn_string(lua_State *L, int i) {
+  static char fn_name[1024];
+
+  // Ensure i is an absolute index as we'll be pushing/popping things after it.
+  if (i < 0) i = lua_gettop(L) + i + 1;
+
+  // Check to see if the function has a global name.
+      // stack = [..]
+  lua_getglobal(L, "_G");
+      // stack = [.., _G]
+  lua_pushnil(L);
+      // stack = [.., _G, nil]
+  while (lua_next(L, -2)) {
+      // stack = [.., _G, key, value]
+    if (lua_rawequal(L, i, -1)) {
+      snprintf(fn_name, 1024, "function:%s", lua_tostring(L, -2));
+      lua_pop(L, 3);
+      // stack = [..]
+      return fn_name;
+    }
+      // stack = [.., _G, key, value]
+    lua_pop(L, 1);
+      // stack = [.., _G, key]
+  }
+  // If we get here, the function didn't have a global name; print a pointer.
+      // stack = [.., _G]
+  lua_pop(L, 1);
+      // stack = [..]
+  snprintf(fn_name, 1024, "function:%p", lua_topointer(L, i));
+  return fn_name;
+}
+
 static void print_item(lua_State *L, int i, int as_key) {
   int ltype = lua_type(L, i);
   // Set up first, last and start and end delimiters.
@@ -155,8 +187,8 @@ static void print_item(lua_State *L, int i, int as_key) {
       return;
 
     case LUA_TFUNCTION:
-      printf("%sfunction:", first);
-      break;
+      printf("%s%s%s", first, get_fn_string(L, i), last);
+      return;
 
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
