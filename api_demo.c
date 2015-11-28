@@ -30,24 +30,24 @@ const char *help_string =
   "                                                                         \n"
   "-- writing values to the stack ----------------------------------------- \n"
   "                                                                         \n"
-  "     lua_pushboolean(L, int)                                [-0  +1  -]  \n"
-  " --- lua_pushfstring(L, str, ...)                           [-0  +1  m]  \n"
-  " --- lua_pushinteger(L, lua_Integer)                        [-0  +1  -]  \n"
-  "     lua_pushlstring(L, str, size_t)                        [-0  +1  m]  \n"
-  "     lua_pushnil(L)                                         [-0  +1  -]  \n"
-  "     lua_pushnumber(L, lua_Number)                          [-0  +1  -]  \n"
-  "     lua_pushstring(L, str)                                 [-0  +1  m]  \n"
+  "     lua_pushboolean(L, int)                                [-0 +1 -]    \n"
+  " --- lua_pushfstring(L, str, ...)                           [-0 +1 m]    \n"
+  " --- lua_pushinteger(L, lua_Integer)                        [-0 +1 -]    \n"
+  "     lua_pushlstring(L, str, size_t)                        [-0 +1 m]    \n"
+  "     lua_pushnil(L)                                         [-0 +1 -]    \n"
+  "     lua_pushnumber(L, lua_Number)                          [-0 +1 -]    \n"
+  "     lua_pushstring(L, str)                                 [-0 +1 m]    \n"
   "                                                                         \n"
   "                                                                         \n"
   "-- stack manipulation -------------------------------------------------- \n"
   "                                                                         \n"
-  " int lua_checkstack(L, int)           ensure stack capacity [-0  +0  m]  \n"
-  " int lua_gettop(L)                    get stack size        [-0  +0  -]  \n"
-  "     lua_insert(L, int i)             mv top -> i           [-1  +1  -]  \n"
-  "     lua_pushvalue(L, int i)          cp i -> top           [-0  +1  m]  \n"
-  "     lua_remove(L, int i)             rm i                  [-1  +0  -]  \n"
-  "     lua_replace(L, int i)            rm i, mv top -> i     [-1  +0  -]  \n"
-  "     lua_settop(L, int)               set stack size        [-?  +?  -]  \n"
+  " int lua_checkstack(L, int)           ensure stack capacity [-0 +0 m]    \n"
+  " int lua_gettop(L)                    get stack size        [-0 +0 -]    \n"
+  "     lua_insert(L, int i)             mv top -> i           [-1 +1 -]    \n"
+  "     lua_pushvalue(L, int i)          cp i -> top           [-0 +1 m]    \n"
+  "     lua_remove(L, int i)             rm i                  [-1 +0 -]    \n"
+  "     lua_replace(L, int i)            rm i, mv top -> i     [-1 +0 -]    \n"
+  "     lua_settop(L, int)               set stack size        [-? +? -]    \n"
   "                                                                         \n"
   "                                                                         \n"
   "-- reading values from the stack --------------------------------------- \n"
@@ -108,17 +108,68 @@ const char *help_string =
   "                                                                         \n"
   "-- basic operators ----------------------------------------------------- \n"
   "                                                                         \n"
+  "     lua_concat(L, int n)             str cat top n vals    [-n +1 e]    \n"
+  " int lua_equal(L, int i, int j)       1 if stk[i] == stk[j] [-0 +0 e]    \n"
+  " int lua_lessthan(L, int i, int j)    1 if stk[i] < stk[j]  [-0 +0 e]    \n"
+  " int lua_rawequal(L, int i, int j)    equal?; no metacalls  [-0 +0 -]    \n"
+  "                                                                         \n"
+  "                                                                         \n"
+  "-- function calls ------------------------------------------------------ \n"
+  "                                                                         \n"
+  " --- lua_atpanic(L, lua_CFunciton f)  set panic fn; ret old [-0 +0 -]    \n"
+  "     lua_call(L, int m, int n)        -/call f(m-args); +n  [-(m+1) +n e]\n"
+  " int lua_pcall(L, int m, n, e)        call w/ errfn=stk[e]  [-(m+1)      \n"
+  "                                      err:push msg; ret!=0        +n|1 e]\n"
+  " --- lua_cpcall(L, l_CFn f, void *ud) call f(ud);+1 if err  [-0 +0|1 -]  \n"
+  " int luaL_callmeta(L, int o, str s)   mt(stk[o])[s] if any  [-0 +0|1 e]  \n"
+  "                                                                         \n"
+  "                                                                         \n"
+  "-- error handling ------------------------------------------------------ \n"
+  "                                                                         \n"
+  " int lua_error(L)                     pop errmsg; throw it  [-1 +0 v]    \n"
+  " --- luaL_error(L, str fmt, ...)      throw errmsg fmt      [-0 +0 v]    \n"
+  "                                                                         \n"
+  "     luaL_checkany(L, int n)          err if stk[n] is none [-0 +0 v]    \n"
+  " int luaL_checkint(L, int n)          int(stk[n]) or err    [-0 +0 v]    \n"
+  " --- luaL_checkinteger(L, int n)      l_I(stk[n]) or err    [-0 +0 v]    \n"
+  " --- luaL_checklong(L, int n)         lng(stk[n]) or err    [-0 +0 v]    \n"
+  " --- luaL_checklstring(L, n, szt *l)  str(stk[n]) or err    [-0 +0 v]    \n"
+  " l_N luaL_checknumber(L, int n)       l_N(stk[n]) or err    [-0 +0 v]    \n"
+  " str luaL_checkstring(L, int n)       str(stk[n]) or err    [-0 +0 v]    \n"
+  "                                                                         \n"
+  "     luaL_checktype(L, int n, int tp) err if tp(stk[n])!=tp [-0 +0 v]    \n"
+  " int luaL_typerror(L, int n, str msg) err;msg=expected type [-0 +0 v]    \n"
+  "                                                                         \n"
+  "                                                                         \n"
+  "-- running Lua code ---------------------------------------------------- \n"
+  "                                                                         \n"
+  " --- lua_load(L, lua_Reader, void*, str) loads code;push fn [-0 +1 -]    \n"
+  "                                      err:ret non0/push msg              \n"
+  "                                                                         \n"
+  " int luaL_loadfile(L, str filename)   loadfile; push as fn  [-0 +1 m]    \n"
+  " int luaL_loadstring(L, str code)     load code; push as fn [-0 +1 m]    \n"
+  "                                                                         \n"
+  " int luaL_dofile(L, str filename)     load and run file     [-0 +? m]    \n"
+  " int luaL_dostring(L, str code)       load and run code     [-0 +? m]    \n"
+  "                                                                         \n"
+  "                                                                         \n"
+  "-- key ----------------------------------------------------------------- \n"
+  "                                                                         \n"
+  " Notation [-a +b X] means: 1st pops last a values, then pushes b values  \n"
+  "                           X = -   never throws an error                 \n"
+  "                           X = m   may throw a memory error              \n"
+  "                           X = v   may throw an error by request         \n"
+  "                           X = e   may throw any error                   \n"
+  "                                                                         \n"
+  " Notation [-a +b|c X] means pushes b values if retval is 0; c otherwise  \n"
+  "                                                                         \n"
+  "   --- before a function means it's not implemented in this demo api     \n"
+  "                                                                         \n"
+  " Abbreviations:                                                          \n"
+  "   str = const char *                              szt = size_t          \n"
+  "   l_I = lua_Integer (often int32 or int64)        stk = stack           \n"
+  "   l_N = lua_Number  (often double)                 tp = type            \n"
   "                                                                         \n";
-
-// TODO
-//   Items to put in the key:
-//   * Notate for [-0 +0 -] part.
-//   * str = const char *
-//   * l_I = lua_Integer
-//   * l_N = lua_Number
-//   * stk = stack
-//   * szt = size_t
-//   * note about return values for fns that may push diff # of values
 
 
 // # Internal typedefs.
@@ -878,6 +929,11 @@ static int setup_globals(lua_State *L) {
   return 0;  // Number of values to return that are on the stack.
 }
 
+int show_help(lua_State *L) {
+  printf("%s", help_string);
+  return 0;
+}
+
 // ## The main entry point, and only directly public-facing function.
 
 int luaopen_api_demo(lua_State *L) {
@@ -894,6 +950,7 @@ int luaopen_api_demo(lua_State *L) {
   // Register the public-facing Lua methods of our module.
   luaL_Reg fns[] = {
     {"setup_globals", setup_globals},
+    {"help",          show_help},
     {NULL, NULL}
   };
   luaL_register(L, "api_demo", fns);
