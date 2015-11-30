@@ -223,7 +223,8 @@ static int is_seq(lua_State *L, int i) {
 static void print_seq(lua_State *L, int i) {
   printf("{");
 
-  for (int k = 1;; ++k) {
+  int k;
+  for (k = 1;; ++k) {
         // stack = [..]
     lua_rawgeti(L, i, k);
         // stack = [.., t[k]]
@@ -359,7 +360,8 @@ static void print_item(lua_State *L, int i, int as_key) {
 static void print_stack(lua_State *L, int omit) {
   int n = lua_gettop(L) - omit;
   printf("stack:");
-  for (int i = 1; i <= n; ++i) {
+  int i;
+  for (i = 1; i <= n; ++i) {
     printf(" ");
     print_item(L, i, 0);  // 0 --> as_key
   }
@@ -415,7 +417,8 @@ static void load_state(lua_State *L, FakeLuaState *demo_state) {
   assert(lua_isnumber(L, 2));
   int num_items = lua_tointeger(L, 2);
   lua_pop(L, 1);
-  for (int k = 1; k <= num_items; ++k) {
+  int k;
+  for (k = 1; k <= num_items; ++k) {
       // stack = [demo_state_data, <first k-1 items of saved stack>]
     lua_rawgeti(L, 1, k);
       // stack = [demo_state_data, <first k-1 items of saved stack>, item[k]]
@@ -453,7 +456,8 @@ static void save_state(lua_State *L, int omit) {
       // stack = [<state_to_save>, demo_state_data]
 
   // Set each item by int keys, counting up from 1.
-  for (int k = 1; k <= num_items; ++k) {
+  int k;
+  for (k = 1; k <= num_items; ++k) {
       // stack = [<state_to_save>, demo_state_data]
     lua_pushvalue(L, k);
       // stack = [<state_to_save>, demo_state_data, item[k]]

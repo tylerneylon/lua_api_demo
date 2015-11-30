@@ -1,5 +1,5 @@
 package = "apidemo"
-version = "1.0-1"
+version = "1.0-2"
 source = {
   url = "git://github.com/tylerneylon/lua_api_demo",
   tag = "v1.0"
