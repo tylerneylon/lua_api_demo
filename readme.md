@@ -12,8 +12,8 @@ Below is an example interpreter usage, given with both the user-typed input and
 the printed output. Ending semicolons in Lua are optional and usually omitted;
 however, I'm using them here to keep the C-like lines more C-like.
 
-    > api_demo = require 'api_demo'
-    > api_demo.setup_globals()
+    > apidemo = require 'apidemo'
+    > apidemo.setup_globals()
     > L = luaL_newstate()
     > lua_pushnumber(L, 42);
     stack: 42
@@ -30,14 +30,14 @@ however, I'm using them here to keep the C-like lines more C-like.
 So far this module has only been tested on Mac OS X.
 
 This module must be compiled before it can be used. Run the `make` shell command
-to build the file `api_demo.so`. A Lua interpreter or script run in the same
+to build the file `apidemo.so`. A Lua interpreter or script run in the same
 directory will find this file when the standard `require` function is used. For
 global access, place this file, or a symlink to it, in any directory listed in
 your Lua's `package.cpath`. For example, if you're running Lua 5.3, the
 following shell commands will work when run from this repo's directory:
 
     $ make
-    $ sudo ln -s `pwd`/api_demo.so /usr/local/lib/lua/5.3/
+    $ sudo ln -s `pwd`/apidemo.so /usr/local/lib/lua/5.3/
 
 ## API quick reference
 

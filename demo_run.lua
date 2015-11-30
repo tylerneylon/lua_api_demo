@@ -2,14 +2,14 @@
 
 demo_run.lua
 
-This file is intended to demonstrate how to use the api_demo module.
+This file is intended to demonstrate how to use the apidemo module.
 
 --]]
 
 
 -- Setup.
-local api_demo = require 'api_demo'
-api_demo.setup_globals()
+local apidemo = require 'apidemo'
+apidemo.setup_globals()
 L = luaL_newstate()
 
 -- We'll use semicolons below to make the code more closely resemble C.

@@ -1,4 +1,4 @@
-// api_demo.c
+// apidemo.c
 //
 // This is a Lua module written to simulate Lua's C API, except that it is run
 // from within Lua itself. This is written for educational purposes.
@@ -936,7 +936,7 @@ int show_help(lua_State *L) {
 
 // ## The main entry point, and only directly public-facing function.
 
-int luaopen_api_demo(lua_State *L) {
+int luaopen_apidemo(lua_State *L) {
 
   // Set up the unique metatable for our userdata instances.
   // This table is empty and only used to verify that the userdata instances we
@@ -953,8 +953,8 @@ int luaopen_api_demo(lua_State *L) {
     {"help",          show_help},
     {NULL, NULL}
   };
-  luaL_register(L, "api_demo", fns);
-      // stack = [api_demo]
+  luaL_register(L, "apidemo", fns);
+      // stack = [apidemo]
 
   return 1;  // Number of Lua-facing return values on the Lua stack in L.
 }
