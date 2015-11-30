@@ -27,6 +27,8 @@ however, I'm using them here to keep the C-like lines more C-like.
 
 ## Installing and building the module
 
+This module has been tested on Mac OS X and Ubuntu.
+
 ### Using luarocks
 
 If you use [luarocks](https://luarocks.org/), you can install the module by
