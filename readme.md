@@ -25,11 +25,19 @@ however, I'm using them here to keep the C-like lines more C-like.
     hello from the api!
     stack: 42
 
-## Building the module
+## Installing and building the module
 
-So far this module has only been tested on Mac OS X.
+### Using luarocks
 
-This module must be compiled before it can be used. Run the `make` shell command
+If you use luarocks, you can install the module by running:
+
+    $ sudo luarocks install apidemo
+
+### Using make
+
+If you don't use luarocks, you can manually build and install, although the
+current Makefile has only been tested on Mac OS X.
+Run the `make` shell command
 to build the file `apidemo.so`. A Lua interpreter or script run in the same
 directory will find this file when the standard `require` function is used. For
 global access, place this file, or a symlink to it, in any directory listed in
