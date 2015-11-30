@@ -29,7 +29,8 @@ however, I'm using them here to keep the C-like lines more C-like.
 
 ### Using luarocks
 
-If you use luarocks, you can install the module by running:
+If you use [luarocks](https://luarocks.org/), you can install the module by
+running:
 
     $ sudo luarocks install apidemo
 
