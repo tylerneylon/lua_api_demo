@@ -11,8 +11,8 @@
 // simulated.
 //
 
-#include "lua.h"
-#include "lauxlib.h"
+#include <lua.h>
+#include <lauxlib.h>
 
 #include <assert.h>
 #include <ctype.h>
