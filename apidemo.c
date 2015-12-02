@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #define states_table_key     "ApiDemo.SavedStates"
 #define demo_state_metatable "ApiDemo.LuaState"
 
@@ -496,6 +495,13 @@ static int demo_luaL_newstate(lua_State *L) {
       // stack = [demo_L]
   return 1;  // Number of values to return that are on the stack.
 }
+
+// ### Macros to work with luaL_checkint and luaL_optint in Lua 5.3.
+
+#if LUA_VERSION_NUM == 503
+#define luaL_checkint(L, arg) (int)(luaL_checkinteger(L, arg))
+#define luaL_optint(L, arg, d) (int)(luaL_optinteger(L, arg, d))
+#endif
 
 // ### Macros that make it easy to wrap Lua C API functions.
 
