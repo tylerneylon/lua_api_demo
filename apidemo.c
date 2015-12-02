@@ -11,8 +11,8 @@
 // simulated.
 //
 
-#include "lua.h"
-#include "lauxlib.h"
+#include <lua.h>
+#include <lauxlib.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -926,7 +926,9 @@ static int setup_globals(lua_State *L) {
   register_const(LUA_TTHREAD);
 
   register_const(LUA_REGISTRYINDEX);
+#if LUA_VERSION_NUM == 501
   register_const(LUA_GLOBALSINDEX);
+#endif
 
   register_const(LUA_MULTRET);
 
