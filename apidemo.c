@@ -23,11 +23,6 @@
 #define states_table_key     "ApiDemo.SavedStates"
 #define demo_state_metatable "ApiDemo.LuaState"
 
-// lua_objlen was replaced with lua_rawlen in the change from Lua 5.1 to 5.2.
-#if LUA_VERSION_NUM == 501
-#define lua_rawlen lua_objlen
-#endif
-
 
 // # The help string.
 
@@ -698,7 +693,6 @@ fn_int_in_int_out      (lua_isstring);
 fn_int_in_int_out      (lua_istable);
 fn_nothing_in          (lua_newtable);
 fn_int_in_int_out      (lua_next);
-fn_int_in_int_out      (lua_rawlen);
 fn_int_in              (lua_pop);
 fn_int_in              (lua_pushboolean);
 fn_string_int_in       (lua_pushlstring);
@@ -725,9 +719,14 @@ fn_int_in_string_out   (lua_tostring);
 fn_int_in_int_out      (lua_type);
 fn_int_in_string_out   (lua_typename);
 
+// Version-specific functions.
+
 #if LUA_VERSION_NUM == 501
 fn_int_int_in          (lua_equal);
 fn_int_int_in          (lua_lessthan);
+fn_int_in_int_out      (lua_objlen);
+#else
+fn_int_in_int_out      (lua_rawlen);
 #endif
 
 fn_int_string_in_int_out  (luaL_argerror);
@@ -862,7 +861,6 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_istable);
   register_fn(lua_newtable);
   register_fn(lua_next);
-  register_fn(lua_rawlen);
   register_fn(lua_pcall);
   register_fn(lua_pop);
   register_fn(lua_pushboolean);
@@ -891,9 +889,14 @@ static int setup_globals(lua_State *L) {
   register_fn(lua_type);
   register_fn(lua_typename);
 
+// Version-specific functions.
+
 #if LUA_VERSION_NUM == 501
   register_fn(lua_equal);
   register_fn(lua_lessthan);
+  register_fn(lua_objlen);
+#else
+  register_fn(lua_rawlen);
 #endif
 
   register_fn(luaL_argerror);
