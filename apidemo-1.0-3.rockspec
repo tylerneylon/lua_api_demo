@@ -1,8 +1,8 @@
 package = "apidemo"
-version = "1.0-2"
+version = "1.0-3"
 source = {
   url = "git://github.com/tylerneylon/lua_api_demo",
-  tag = "v1.0-2"
+  tag = "v1.0-3"
 }
 description = {
   summary = "A module to teach or learn about Lua's C API",
