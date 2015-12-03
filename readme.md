@@ -52,8 +52,10 @@ following shell commands will work when run from this repo's directory:
 
 ## API quick reference
 
-This module contains a help string that documents the behavior of both this
-module and of a large subset of Lua's C API.
+This module contains the following help string that documents the behavior of
+both this module and of a large subset of Lua's C API. It's printed by calling
+`apidemo.help()`.
+
 
 ```
 -- writing values to the stack ----------------------------------------- 
@@ -126,7 +128,8 @@ module and of a large subset of Lua's C API.
  int lua_getmetatable(L, int i)       push mt(stk[i])if any [-1 +0|1 -]  
                                                                          
  int lua_next(L, int i)               pop k/push k,v if any [-1 +0|2 e]  
- szt lua_objlen(L, int i)             #stk[i], assuming seq [-0 +0 -]    
+ szt lua_objlen(L, int i)  Lua 5.1    #stk[i], assuming seq [-0 +0 -]    
+ szt lua_rawlen(L, int i)  Lua 5.2+   #stk[i], assuming seq [-0 +0 -]    
                                                                          
      lua_setglobal(L, str name)       pops v; _G[name]=v    [-1 +0 e]    
      lua_getglobal(L, str name)       pushes _G[name]       [-0 +1 e]    
@@ -166,7 +169,6 @@ module and of a large subset of Lua's C API.
  str luaL_checkstring(L, int n)       str(stk[n]) or err    [-0 +0 v]    
                                                                          
      luaL_checktype(L, int n, int tp) err if tp(stk[n])!=tp [-0 +0 v]    
- int luaL_typerror(L, int n, str msg) err;msg=expected type [-0 +0 v]    
                                                                          
                                                                          
 -- running Lua code ---------------------------------------------------- 
@@ -196,5 +198,5 @@ module and of a large subset of Lua's C API.
  Abbreviations:                                                          
    str = const char *                              szt = size_t          
    l_I = lua_Integer (often int32 or int64)        stk = stack           
-   l_N = lua_Number  (often double)                 tp = type        
+   l_N = lua_Number  (often double)                 tp = type            
 ```
